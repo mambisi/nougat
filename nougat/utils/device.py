@@ -33,16 +33,14 @@ def default_batch_size():
         logging.warning("No GPU or TPU found. Conversion on CPU is very slow.")
     return batch_size
 
-def move_to_device(model, bf16: bool = True, cuda: bool = True, xla: bool = True):
-    try:
-        if torch.backends.mps.is_available():
-            return model.to("mps")
-    except AttributeError:
-        pass
-    if bf16 and not xla:  # XLA does not support bfloat16 via .to() directly
-        model = model.to(torch.bfloat16)
+def move_to_device(model, bf16=True, cuda=True, xla=False):
     if xla and has_xla:
         model = model.to(xm.xla_device())
     elif cuda and torch.cuda.is_available():
         model = model.to("cuda")
+    else:
+        # Handles the CPU case or any other case not specifically managed
+        model = model.to("cpu")
+    if bf16 and not xla:  # Note: XLA handles precision internally differently
+        model = model.to(torch.bfloat16)
     return model
